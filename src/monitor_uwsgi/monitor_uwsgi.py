@@ -1,7 +1,7 @@
 import socket
 import json
 
-import initialize
+from .initialize import *
 
 from metrics import *
 
