@@ -2,7 +2,7 @@
 
 basedir=$(dirname "$0")
 
-source "${basedir}"/../.venv/bin/activate
+source "${basedir}"/.venv/bin/activate
 pip-sync
 
 python src/monitor_uwsgi/monitor_uwsgi.py
