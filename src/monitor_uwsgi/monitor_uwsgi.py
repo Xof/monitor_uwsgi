@@ -3,7 +3,7 @@ import json
 
 from .initialize import *
 
-from metrics import *
+from .metrics import *
 
 def main(address='127.0.0.1', port=1717, gulp=4096):
     with socket.create_connection((address, port)) as s:
