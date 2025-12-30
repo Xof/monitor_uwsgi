@@ -1,0 +1,8 @@
+from datadog import initialize
+
+options = {
+    'statsd_host':'127.0.0.1',
+    'statsd_port':8125
+}
+
+initialize(**options)
