@@ -10,6 +10,7 @@ requires-python = ">=3.13"
 dependencies = [
     "click>=8.3.1",
     "datadog>=0.52.1",
+    "pip-tools>=7.5.2",
 ]
 
 [project.scripts]
