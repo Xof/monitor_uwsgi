@@ -8,6 +8,7 @@ respawns); instantaneous values via gauge.
 
 from datadog_checks.base import AgentCheck, ConfigurationError
 
+from .health import evaluate_saturation
 from .metrics import COLLECTORS
 from .stats import read_stats
 
@@ -41,3 +42,13 @@ class UwsgiStatsCheck(AgentCheck):
 
         for collect in COLLECTORS:
             collect(self, stats, base_tags)
+
+        status, message = evaluate_saturation(stats, instance)
+        # Convention (matches can_connect above): the Agent drops the message on
+        # OK checks, and the test stub enforces that by raising if one is sent.
+        self.service_check(
+            "worker_saturation",
+            status,
+            tags=base_tags,
+            message=message if status != AgentCheck.OK else None,
+        )
