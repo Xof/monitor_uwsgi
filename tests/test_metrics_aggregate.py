@@ -10,9 +10,9 @@ def _run(aggregator, stats):
 
 def test_global_gauges(aggregator, stats):
     _run(aggregator, stats)
-    aggregator.assert_metric("uwsgi.listen_queue", value=3, tags=["env:test"])
-    aggregator.assert_metric("uwsgi.signal_queue", value=0, tags=["env:test"])
-    aggregator.assert_metric("uwsgi.workers.total", value=3, tags=["env:test"])
+    aggregator.assert_metric("uwsgi.listen_queue", value=3, tags=["env:test"], metric_type=aggregator.GAUGE)
+    aggregator.assert_metric("uwsgi.signal_queue", value=0, tags=["env:test"], metric_type=aggregator.GAUGE)
+    aggregator.assert_metric("uwsgi.workers.total", value=3, tags=["env:test"], metric_type=aggregator.GAUGE)
 
 
 def test_listen_queue_errors_is_monotonic_count(aggregator, stats):
@@ -27,8 +27,18 @@ def test_listen_queue_errors_is_monotonic_count(aggregator, stats):
 
 def test_workers_by_status_buckets(aggregator, stats):
     _run(aggregator, stats)
-    aggregator.assert_metric("uwsgi.workers.by_status", value=1, tags=["env:test", "status:idle"])
-    aggregator.assert_metric("uwsgi.workers.by_status", value=2, tags=["env:test", "status:busy"])
-    aggregator.assert_metric("uwsgi.workers.by_status", value=0, tags=["env:test", "status:cheap"])
-    aggregator.assert_metric("uwsgi.workers.by_status", value=0, tags=["env:test", "status:pause"])
-    aggregator.assert_metric("uwsgi.workers.by_status", value=0, tags=["env:test", "status:sig"])
+    aggregator.assert_metric(
+        "uwsgi.workers.by_status", value=1, tags=["env:test", "status:idle"], metric_type=aggregator.GAUGE
+    )
+    aggregator.assert_metric(
+        "uwsgi.workers.by_status", value=2, tags=["env:test", "status:busy"], metric_type=aggregator.GAUGE
+    )
+    aggregator.assert_metric(
+        "uwsgi.workers.by_status", value=0, tags=["env:test", "status:cheap"], metric_type=aggregator.GAUGE
+    )
+    aggregator.assert_metric(
+        "uwsgi.workers.by_status", value=0, tags=["env:test", "status:pause"], metric_type=aggregator.GAUGE
+    )
+    aggregator.assert_metric(
+        "uwsgi.workers.by_status", value=0, tags=["env:test", "status:sig"], metric_type=aggregator.GAUGE
+    )
