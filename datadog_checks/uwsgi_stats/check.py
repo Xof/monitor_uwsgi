@@ -15,6 +15,10 @@ from .stats import read_stats
 class UwsgiStatsCheck(AgentCheck):
     __NAMESPACE__ = "uwsgi"
 
+    def __init__(self, name, init_config, instances):
+        super().__init__(name, init_config, instances)
+        self._prev_worker = {}
+
     def check(self, instance):
         stats_url = instance.get("stats_url")
         if not stats_url:
