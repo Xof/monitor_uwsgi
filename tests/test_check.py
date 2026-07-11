@@ -28,3 +28,18 @@ def test_missing_stats_url_raises_configuration_error(aggregator):
     check = UwsgiStatsCheck("uwsgi_stats", {}, [{}])
     with pytest.raises(ConfigurationError):
         check.check({})
+
+
+def test_configuration_error_from_read_stats_propagates_without_service_check(
+    aggregator, instance, monkeypatch
+):
+    from datadog_checks.base import ConfigurationError
+
+    def bad_scheme(url, timeout):
+        raise ConfigurationError("unsupported scheme")
+
+    monkeypatch.setattr(check_module, "read_stats", bad_scheme)
+    check = UwsgiStatsCheck("uwsgi_stats", {}, [instance])
+    with pytest.raises(ConfigurationError):
+        check.check(instance)
+    aggregator.assert_service_check("uwsgi.can_connect", count=0)
