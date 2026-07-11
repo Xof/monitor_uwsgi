@@ -17,6 +17,14 @@ def test_apps_emitted_only_for_multi_app_worker(aggregator, stats):
         metric_type=aggregator.MONOTONIC_COUNT,
         tags=["worker_id:2", "app_id:1", "mountpoint:/admin"],
     )
+    aggregator.assert_metric(
+        "uwsgi.worker.app.exceptions", value=0, metric_type=aggregator.MONOTONIC_COUNT,
+        tags=["worker_id:2", "app_id:0", "mountpoint:/api"],
+    )
+    aggregator.assert_metric(
+        "uwsgi.worker.app.exceptions", value=0, metric_type=aggregator.MONOTONIC_COUNT,
+        tags=["worker_id:2", "app_id:1", "mountpoint:/admin"],
+    )
 
     # Workers 1 and 3 have a single app -> not emitted.
     single_app = [
