@@ -10,10 +10,10 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "BSD-3-Clause" }
 authors = [{ name = "Christophe Pettus", email = "cpettus@pgexperts.com" }]
-dependencies = ["datadog-checks-base[deps]"]
+dependencies = ["datadog-checks-base"]
 
 [project.optional-dependencies]
-dev = ["datadog-checks-dev", "pytest", "ruff", "mypy"]
+dev = ["datadog-checks-base[deps]", "datadog-checks-dev", "pytest", "ruff", "mypy"]
 
 [tool.setuptools.dynamic]
 version = { attr = "datadog_checks.uwsgi_stats.__about__.__version__" }
