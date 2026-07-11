@@ -26,6 +26,18 @@ def test_worker_counters_are_monotonic(aggregator, stats):
         "uwsgi.worker.respawn_count", value=2,
         metric_type=aggregator.MONOTONIC_COUNT, tags=["worker_id:3"],
     )
+    aggregator.assert_metric(
+        "uwsgi.worker.exceptions", value=2,
+        metric_type=aggregator.MONOTONIC_COUNT, tags=["worker_id:1"],
+    )
+    aggregator.assert_metric(
+        "uwsgi.worker.signals", value=0,
+        metric_type=aggregator.MONOTONIC_COUNT, tags=["worker_id:1"],
+    )
+    aggregator.assert_metric(
+        "uwsgi.worker.running_time", value=3000000,
+        metric_type=aggregator.MONOTONIC_COUNT, tags=["worker_id:1"],
+    )
 
 
 def test_worker_gauges(aggregator, stats):
@@ -40,6 +52,14 @@ def test_worker_gauges(aggregator, stats):
     )
     aggregator.assert_metric(
         "uwsgi.worker.accepting", value=1,
+        metric_type=aggregator.GAUGE, tags=["worker_id:1"],
+    )
+    aggregator.assert_metric(
+        "uwsgi.worker.signal_queue", value=0,
+        metric_type=aggregator.GAUGE, tags=["worker_id:1"],
+    )
+    aggregator.assert_metric(
+        "uwsgi.worker.vsz", value=209715200,
         metric_type=aggregator.GAUGE, tags=["worker_id:1"],
     )
 
