@@ -1,0 +1,57 @@
+{
+  "version": "2.0.24",
+  "listen_queue": 3,
+  "listen_queue_errors": 1,
+  "signal_queue": 0,
+  "load": 3,
+  "pid": 1000,
+  "sockets": [
+    {"name": "127.0.0.1:8000", "proto": "uwsgi", "queue": 3, "max_queue": 100, "shared": 0, "can_offload": 0},
+    {"name": "/tmp/app.sock", "proto": "http", "queue": 0, "max_queue": 100, "shared": 0, "can_offload": 0}
+  ],
+  "workers": [
+    {
+      "id": 1, "pid": 1001, "accepting": 1, "requests": 1500, "delta_requests": 500,
+      "exceptions": 2, "harakiri_count": 0, "signals": 0, "signal_queue": 0,
+      "status": "idle", "rss": 52428800, "vsz": 209715200, "running_time": 3000000,
+      "last_spawn": 1783800000, "respawn_count": 1, "tx": 10485760, "avg_rt": 2000,
+      "apps": [
+        {"id": 0, "modifier1": 0, "mountpoint": "", "startup_time": 1, "requests": 1500, "exceptions": 2, "chdir": ""}
+      ],
+      "cores": [
+        {"id": 0, "requests": 1500, "static_requests": 0, "routed_requests": 0, "offloaded_requests": 0, "write_errors": 0, "read_errors": 0, "in_request": 0}
+      ]
+    },
+    {
+      "id": 2, "pid": 1002, "accepting": 1, "requests": 1400, "delta_requests": 400,
+      "exceptions": 0, "harakiri_count": 1, "signals": 0, "signal_queue": 0,
+      "status": "busy", "rss": 53477376, "vsz": 209715200, "running_time": 2800000,
+      "last_spawn": 1783800000, "respawn_count": 1, "tx": 9437184, "avg_rt": 2100,
+      "apps": [
+        {"id": 0, "modifier1": 0, "mountpoint": "/api", "startup_time": 1, "requests": 700, "exceptions": 0, "chdir": ""},
+        {"id": 1, "modifier1": 0, "mountpoint": "/admin", "startup_time": 1, "requests": 700, "exceptions": 0, "chdir": ""}
+      ],
+      "cores": [
+        {"id": 0, "requests": 1400, "static_requests": 0, "routed_requests": 0, "offloaded_requests": 0, "write_errors": 3, "read_errors": 1, "in_request": 1}
+      ]
+    },
+    {
+      "id": 3, "pid": 1003, "accepting": 1, "requests": 10, "delta_requests": 10,
+      "exceptions": 0, "harakiri_count": 0, "signals": 0, "signal_queue": 0,
+      "status": "busy", "rss": 20971520, "vsz": 104857600, "running_time": 15000,
+      "last_spawn": 1783800300, "respawn_count": 2, "tx": 65536, "avg_rt": 1500,
+      "apps": [
+        {"id": 0, "modifier1": 0, "mountpoint": "", "startup_time": 1, "requests": 10, "exceptions": 0, "chdir": ""}
+      ],
+      "cores": [
+        {"id": 0, "requests": 10, "static_requests": 0, "routed_requests": 0, "offloaded_requests": 0, "write_errors": 0, "read_errors": 0, "in_request": 1}
+      ]
+    }
+  ],
+  "caches": [
+    {"name": "default", "hash": "djb33x", "hashsize": 65536, "keysize": 2048, "max_items": 1000, "blocks": 1000, "blocksize": 65536, "items": 250, "hits": 8000, "miss": 1200, "full": 0, "last_modified_at": 1783800250}
+  ],
+  "spoolers": [
+    {"dir": "/var/spool/uwsgi", "pid": 1004, "tasks": 42, "respawns": 0, "running": 0}
+  ]
+}
