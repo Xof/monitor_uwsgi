@@ -1,0 +1,32 @@
+init_config:
+
+instances:
+    ## @param stats_url - string - required
+    ## uWSGI stats server address. Scheme selects transport:
+    ##   tcp://HOST:PORT       - uWSGI --stats HOST:PORT
+    ##   unix:///path/to.sock  - uWSGI --stats /path/to.sock
+    ##   http://HOST:PORT      - uWSGI --stats-http HOST:PORT
+  - stats_url: tcp://127.0.0.1:1717
+
+    ## @param tags - list of strings - optional
+    ## Tags applied to every metric and service check from this instance.
+    # tags:
+    #   - service:myapp
+    #   - env:prod
+
+    ## @param collect_per_core - boolean - optional - default: false
+    ## Emit per-core metrics (high cardinality; ~duplicates per-worker on sync setups).
+    # collect_per_core: false
+
+    ## @param worker_saturation_warning - float - optional - default: 0.5
+    ## @param worker_saturation_critical - float - optional - default: 0.9
+    ## Socket listen-queue fill ratio (queue/max_queue) thresholds for uwsgi.worker_saturation.
+    # worker_saturation_warning: 0.5
+    # worker_saturation_critical: 0.9
+
+    ## @param timeout - number - optional - default: 5
+    ## Seconds to wait connecting to / reading from the stats server.
+    # timeout: 5
+
+    ## @param min_collection_interval - number - optional - default: 15
+    # min_collection_interval: 15

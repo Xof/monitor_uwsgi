@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "datadog-uwsgi-stats"
+dynamic = ["version"]
+description = "Datadog Agent check for the uWSGI stats server"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Christophe Pettus", email = "cpettus@pgexperts.com" }]
+dependencies = ["datadog-checks-base"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Monitoring",
+]
+
+[project.urls]
+Homepage = "https://github.com/Xof/monitor_uwsgi"
+Source = "https://github.com/Xof/monitor_uwsgi"
+Issues = "https://github.com/Xof/monitor_uwsgi/issues"
+
+[project.optional-dependencies]
+dev = ["datadog-checks-base[deps]", "datadog-checks-dev", "pytest", "ruff", "mypy"]
+
+[tool.setuptools.dynamic]
+version = { attr = "datadog_checks.uwsgi_stats.__about__.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["datadog_checks*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+"datadog_checks.uwsgi_stats" = ["data/*"]
+
+# ddtrace ships its own pytest11 plugins (activated just by being installed, since it's
+# a transitive dep of datadog-checks-base[deps]). Its CI Visibility hooks probe the
+# network at collection time and hang for minutes in sandboxes/CI runners with no
+# egress, rather than failing fast. We don't want APM tracing of our own test suite,
+# so disable those three plugins unconditionally.
+[tool.pytest.ini_options]
+addopts = "-p no:ddtrace -p no:ddtrace.pytest_bdd -p no:ddtrace.pytest_benchmark"
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+
+[tool.mypy]
+python_version = "3.8"
+ignore_missing_imports = true

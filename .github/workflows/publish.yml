@@ -1,0 +1,28 @@
+# Publishes the wheel + sdist to PyPI via OIDC trusted publishing — no API
+# token is stored anywhere. The GitHub release is the deliberate human trigger.
+#
+# One-time setup on PyPI (browser): create a "pending publisher" for project
+# `datadog-uwsgi-stats` pointing at this repo, workflow `publish.yml`, and
+# environment `pypi`. Until that exists on the PyPI side, this job cannot upload.
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/datadog-uwsgi-stats
+    permissions:
+      id-token: write          # REQUIRED: lets the job mint the OIDC token
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - run: python -m pip install --upgrade build
+      - run: python -m build   # sdist + wheel into dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

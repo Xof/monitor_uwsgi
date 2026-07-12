@@ -1,0 +1,20 @@
+[
+  {
+    "agent_version": "6.0.0",
+    "integration": "uWSGI Stats",
+    "check": "uwsgi.can_connect",
+    "statuses": ["ok", "critical"],
+    "groups": [],
+    "name": "uWSGI stats server reachable",
+    "description": "Returns `CRITICAL` if the Agent cannot connect to, read, or parse the uWSGI stats server for an instance; `OK` otherwise."
+  },
+  {
+    "agent_version": "6.0.0",
+    "integration": "uWSGI Stats",
+    "check": "uwsgi.worker_saturation",
+    "statuses": ["ok", "warning", "critical"],
+    "groups": [],
+    "name": "uWSGI worker saturation",
+    "description": "Returns `WARNING` or `CRITICAL` as the socket listen queue fills (queue/max_queue crosses the configured thresholds) or all non-cheap workers are busy with a growing listen queue; `OK` otherwise."
+  }
+]
