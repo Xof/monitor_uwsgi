@@ -31,3 +31,28 @@ Times are microseconds; sizes are bytes.
   invalid JSON, OK otherwise.
 - `uwsgi.worker_saturation` - WARNING/CRITICAL as the socket listen queue fills
   (`queue / max_queue`) or all workers are busy with a growing listen queue.
+
+## Development
+
+The check runs on the Agent's embedded Python (>=3.8), but the test toolchain
+(`datadog-checks-dev`) requires Python >=3.10 — use 3.11/3.12 for development.
+
+```bash
+python -m venv .venv
+. .venv/bin/activate
+pip install -e ".[dev]"
+
+pytest                            # test suite
+ruff check datadog_checks tests   # lint
+mypy datadog_checks/uwsgi_stats   # type check
+python -m build                   # build the wheel into dist/
+```
+
+CI (GitHub Actions) runs ruff, mypy, and pytest on Python 3.11 and 3.12, plus a
+3.8 byte-compile job that guards the Agent-runtime floor.
+
+## Design
+
+- Architecture map, invariants, and landmines: [ARCHITECTURE.md](ARCHITECTURE.md)
+- Decision records: [docs/adr/](docs/adr/README.md)
+- Full design spec: [docs/superpowers/specs/2026-07-11-uwsgi-datadog-plugin-design.md](docs/superpowers/specs/2026-07-11-uwsgi-datadog-plugin-design.md)
