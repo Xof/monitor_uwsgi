@@ -10,13 +10,53 @@ rate graphs.
 
 ## Setup
 
-1. Enable the uWSGI stats server: `--stats 127.0.0.1:1717` (TCP), `--stats /path.sock`
-   (UNIX), or `--stats-http 127.0.0.1:1717` (HTTP).
-2. Build and install the wheel:
-   `python -m build && datadog-agent integration install -w dist/datadog_uwsgi_stats-*.whl`
-3. Copy `datadog_checks/uwsgi_stats/data/conf.yaml.example` to
-   `conf.d/uwsgi_stats.d/conf.yaml` and set `stats_url`.
-4. `datadog-agent reload`, then verify: `datadog-agent check uwsgi_stats`.
+Install the packaged integration into the Datadog Agent's embedded Python.
+
+1. **Enable the uWSGI stats server** — `--stats 127.0.0.1:1717` (TCP),
+   `--stats /path.sock` (UNIX), or `--stats-http 127.0.0.1:1717` (HTTP).
+
+2. **Build the wheel** (see [Development](#development) for the dev environment):
+
+   ```bash
+   python -m build   # -> dist/datadog_uwsgi_stats-<version>-py3-none-any.whl
+   ```
+
+3. **Install the wheel.** `datadog-agent integration install` runs as the
+   `dd-agent` user, which usually cannot read files under your home directory —
+   so stage the wheel somewhere world-readable (e.g. `/tmp`) and pass an
+   **absolute** path, not a `dist/…` path that resolves back into `$HOME`:
+
+   ```bash
+   cp dist/datadog_uwsgi_stats-*.whl /tmp/
+   chmod 644 /tmp/datadog_uwsgi_stats-*.whl
+   sudo -u dd-agent datadog-agent integration install -w /tmp/datadog_uwsgi_stats-*.whl
+   ```
+
+   This installs the check into the Agent's embedded Python and creates
+   `/etc/datadog-agent/conf.d/uwsgi_stats.d/`, into which it copies the packaged
+   `conf.yaml.example`. It does **not** activate the check and does **not**
+   `chown` anything — the config dir is owned by whoever ran the command
+   (`dd-agent` above, which is what you want).
+
+4. **Configure.** Activate the copied template, set `stats_url`, and make sure
+   the Agent user can read it:
+
+   ```bash
+   cd /etc/datadog-agent/conf.d/uwsgi_stats.d
+   sudo -u dd-agent cp conf.yaml.example conf.yaml   # then edit conf.yaml: set stats_url
+   sudo chown -R dd-agent:dd-agent /etc/datadog-agent/conf.d/uwsgi_stats.d
+   sudo chmod 640 conf.yaml
+   ```
+
+5. **Verify, then restart:**
+
+   ```bash
+   sudo -u dd-agent datadog-agent check uwsgi_stats   # runs the check once, as the Agent user
+   sudo systemctl restart datadog-agent               # or: datadog-agent reload
+   ```
+
+> `install -w` skips the version/compatibility checks the registry (`-t`) path
+> performs and cannot verify a local wheel — only install wheels you built or trust.
 
 ## Data Collected
 
