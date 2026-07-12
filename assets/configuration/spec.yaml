@@ -1,0 +1,47 @@
+name: uWSGI Stats
+files:
+  - name: uwsgi_stats.yaml
+    options:
+      - template: init_config
+        options:
+          - template: init_config/default
+      - template: instances
+        options:
+          - name: stats_url
+            required: true
+            description: |
+              The uWSGI stats server address. The URL scheme selects the transport:
+                tcp://HOST:PORT       - uWSGI started with `--stats HOST:PORT`
+                unix:///path/to.sock  - uWSGI started with `--stats /path/to.sock`
+                http://HOST:PORT      - uWSGI started with `--stats-http HOST:PORT`
+            value:
+              type: string
+              example: tcp://127.0.0.1:1717
+          - name: collect_per_core
+            description: |
+              Emit per-core metrics (uwsgi.worker.core.*). High cardinality and roughly
+              duplicates per-worker request counts on the common single-core (sync) setup,
+              so it is disabled by default.
+            value:
+              type: boolean
+              example: false
+          - name: worker_saturation_warning
+            description: |
+              Socket listen-queue fill ratio (queue / max_queue) at or above which the
+              uwsgi.worker_saturation service check reports WARNING.
+            value:
+              type: number
+              example: 0.5
+          - name: worker_saturation_critical
+            description: |
+              Socket listen-queue fill ratio (queue / max_queue) at or above which the
+              uwsgi.worker_saturation service check reports CRITICAL.
+            value:
+              type: number
+              example: 0.9
+          - name: timeout
+            description: Seconds to wait when connecting to and reading from the stats server.
+            value:
+              type: number
+              example: 5
+      - template: instances/default

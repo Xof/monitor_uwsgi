@@ -1,0 +1,38 @@
+metric_name,metric_type,interval,unit_name,per_unit_name,description,orientation,integration,short_name,curated_metric,sample_tags
+uwsgi.listen_queue,gauge,,connection,,Current listen-queue backlog of the primary socket (Linux only),-1,uwsgi_stats,listen queue,,
+uwsgi.listen_queue_errors,monotonic_count,,error,,Cumulative listen-queue overflow errors (Linux only),-1,uwsgi_stats,listen queue errors,,
+uwsgi.signal_queue,gauge,,item,,Items pending in the master signal pipe,-1,uwsgi_stats,signal queue,,
+uwsgi.workers.total,gauge,,worker,,Total number of workers,0,uwsgi_stats,workers total,,
+uwsgi.workers.by_status,gauge,,worker,,Worker count per status bucket,0,uwsgi_stats,workers by status,,status
+uwsgi.socket.queue,gauge,,connection,,Current per-socket listen-queue depth,-1,uwsgi_stats,socket queue,,socket_name proto
+uwsgi.socket.max_queue,gauge,,connection,,Configured max listen backlog for the socket,0,uwsgi_stats,socket max queue,,socket_name proto
+uwsgi.worker.requests,monotonic_count,,request,,Requests handled by the worker since start,0,uwsgi_stats,worker requests,,worker_id
+uwsgi.worker.tx,monotonic_count,,byte,,Bytes transmitted by the worker since start,0,uwsgi_stats,worker tx,,worker_id
+uwsgi.worker.exceptions,monotonic_count,,error,,Exceptions raised in the worker since start,-1,uwsgi_stats,worker exceptions,,worker_id
+uwsgi.worker.harakiri_count,monotonic_count,,event,,Times the worker was killed by harakiri (request timeout),-1,uwsgi_stats,worker harakiri,,worker_id
+uwsgi.worker.signals,monotonic_count,,event,,uWSGI signals handled by the worker since start,0,uwsgi_stats,worker signals,,worker_id
+uwsgi.worker.running_time,monotonic_count,,microsecond,,Cumulative time the worker spent in requests,0,uwsgi_stats,worker running time,,worker_id
+uwsgi.worker.respawn_count,monotonic_count,,event,,Times the worker slot has spawned (starts at 1),0,uwsgi_stats,worker respawns,,worker_id
+uwsgi.worker.signal_queue,gauge,,item,,Items pending in the worker signal pipe,-1,uwsgi_stats,worker signal queue,,worker_id
+uwsgi.worker.avg_rt,gauge,,microsecond,,uWSGI smoothed average response time (not a true mean),-1,uwsgi_stats,worker avg rt,,worker_id
+uwsgi.worker.mean_rt,gauge,,microsecond,,Mean response time from running_time/requests deltas,-1,uwsgi_stats,worker mean rt,,worker_id
+uwsgi.worker.rss,gauge,,byte,,Worker resident set size (0 unless --memory-report),-1,uwsgi_stats,worker rss,,worker_id
+uwsgi.worker.vsz,gauge,,byte,,Worker virtual size (0 unless --memory-report),-1,uwsgi_stats,worker vsz,,worker_id
+uwsgi.worker.accepting,gauge,,,,1 if the worker is in the accept loop,0,uwsgi_stats,worker accepting,,worker_id
+uwsgi.worker.uptime,gauge,,second,,Worker uptime (now - last_spawn),0,uwsgi_stats,worker uptime,,worker_id
+uwsgi.worker.app.requests,monotonic_count,,request,,Requests served by a specific mounted app,0,uwsgi_stats,app requests,,worker_id app_id mountpoint
+uwsgi.worker.app.exceptions,monotonic_count,,error,,Exceptions raised in a specific mounted app,-1,uwsgi_stats,app exceptions,,worker_id app_id mountpoint
+uwsgi.cache.items,gauge,,item,,Items currently stored in the cache,0,uwsgi_stats,cache items,,cache
+uwsgi.cache.hits,monotonic_count,,hit,,Cumulative cache hits,1,uwsgi_stats,cache hits,,cache
+uwsgi.cache.miss,monotonic_count,,miss,,Cumulative cache misses,-1,uwsgi_stats,cache miss,,cache
+uwsgi.cache.full,monotonic_count,,event,,Cumulative writes rejected because the cache was full,-1,uwsgi_stats,cache full,,cache
+uwsgi.spooler.tasks,monotonic_count,,task,,Cumulative spooler tasks processed,0,uwsgi_stats,spooler tasks,,spooler
+uwsgi.spooler.respawns,monotonic_count,,event,,Cumulative spooler respawns,-1,uwsgi_stats,spooler respawns,,spooler
+uwsgi.spooler.running,gauge,,,,1 if the spooler is processing a task now,0,uwsgi_stats,spooler running,,spooler
+uwsgi.worker.core.requests,monotonic_count,,request,,Requests handled on a core since worker start,0,uwsgi_stats,core requests,,worker_id core_id
+uwsgi.worker.core.static_requests,monotonic_count,,request,,Static-file requests handled on a core,0,uwsgi_stats,core static requests,,worker_id core_id
+uwsgi.worker.core.routed_requests,monotonic_count,,request,,Internally routed requests handled on a core,0,uwsgi_stats,core routed requests,,worker_id core_id
+uwsgi.worker.core.offloaded_requests,monotonic_count,,request,,Requests offloaded to offload threads on a core,0,uwsgi_stats,core offloaded requests,,worker_id core_id
+uwsgi.worker.core.write_errors,monotonic_count,,error,,Response write errors on a core,-1,uwsgi_stats,core write errors,,worker_id core_id
+uwsgi.worker.core.read_errors,monotonic_count,,error,,Request read errors on a core,-1,uwsgi_stats,core read errors,,worker_id core_id
+uwsgi.worker.core.in_request,gauge,,,,1 if the core is servicing a request now,0,uwsgi_stats,core in request,,worker_id core_id

@@ -1,0 +1,33 @@
+{
+  "manifest_version": "2.0.0",
+  "app_uuid": "bc813a83-7c7f-4b09-b1be-deb82084b1c8",
+  "app_id": "uwsgi-stats",
+  "display_on_public_website": false,
+  "tile": {
+    "overview": "README.md#Overview",
+    "configuration": "README.md#Setup",
+    "changelog": "CHANGELOG.md",
+    "description": "Collect the full uWSGI stats server metric set as a Datadog Agent check.",
+    "title": "uWSGI Stats",
+    "media": [],
+    "classifier_tags": ["Category::Metrics", "Supported OS::Linux", "Offering::Integration"]
+  },
+  "author": {
+    "name": "Christophe Pettus",
+    "homepage": "https://github.com/",
+    "support_email": "cpettus@pgexperts.com"
+  },
+  "assets": {
+    "integration": {
+      "source_type_name": "uwsgi_stats",
+      "configuration": {"spec": "assets/configuration/spec.yaml"},
+      "events": {"creates_events": false},
+      "metrics": {
+        "prefix": "uwsgi.",
+        "check": "uwsgi.workers.total",
+        "metadata_path": "metadata.csv"
+      },
+      "service_checks": {"metadata_path": "assets/service_checks.json"}
+    }
+  }
+}
