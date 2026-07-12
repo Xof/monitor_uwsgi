@@ -36,5 +36,5 @@ def evaluate_saturation(stats, instance):
         return AgentCheck.OK, message
 
     if all_busy and listen_queue > 0:
-        return AgentCheck.WARNING, "all %d workers busy, listen_queue=%d" % (total, listen_queue)
+        return AgentCheck.WARNING, "all %d non-cheap workers busy, listen_queue=%d" % (len(non_cheap), listen_queue)
     return AgentCheck.OK, "workers busy %d/%d" % (busy, total)

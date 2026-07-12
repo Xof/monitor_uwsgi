@@ -61,3 +61,37 @@ def test_wired_into_check(aggregator, instance, stats, monkeypatch):
     check.check(instance)
     # fixture: socket queue 3/100 -> sat 0.03, workers idle+busy+busy -> OK
     aggregator.assert_service_check("uwsgi.worker_saturation", status=UwsgiStatsCheck.OK)
+
+
+def test_warning_all_busy_with_queue_even_below_ratio_threshold():
+    # sat = 0.10 < warn(0.5), but all workers busy AND listen_queue > 0 -> WARNING via the OR trigger
+    status, _ = evaluate_saturation(_stats(10, 100, ["busy", "busy"], listen_queue=1), {})
+    assert status == AgentCheck.WARNING
+
+
+def test_cheap_workers_excluded_from_all_busy():
+    # 2 busy + 1 cheap, no usable max_queue, listen_queue > 0 -> all NON-cheap busy -> WARNING;
+    # message reports the non-cheap count (2), not the total (3).
+    stats = {
+        "listen_queue": 5,
+        "sockets": [{"name": "s", "proto": "uwsgi", "queue": 5, "max_queue": 0}],
+        "workers": [
+            {"id": 1, "status": "busy"},
+            {"id": 2, "status": "busy"},
+            {"id": 3, "status": "cheap"},
+        ],
+    }
+    status, msg = evaluate_saturation(stats, {})
+    assert status == AgentCheck.WARNING
+    assert "all 2" in msg
+
+
+def test_all_cheap_workers_not_reported_busy():
+    # every worker cheap -> non-cheap set empty -> not all_busy -> OK even with listen_queue > 0
+    stats = {
+        "listen_queue": 3,
+        "sockets": [{"name": "s", "proto": "uwsgi", "queue": 0, "max_queue": 0}],
+        "workers": [{"id": 1, "status": "cheap"}, {"id": 2, "status": "cheap"}],
+    }
+    status, _ = evaluate_saturation(stats, {})
+    assert status == AgentCheck.OK
