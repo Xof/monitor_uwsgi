@@ -10,18 +10,58 @@ rate graphs.
 
 ## Setup
 
-Install the packaged integration into the Datadog Agent's embedded Python.
+Install the packaged integration into the Datadog Agent's embedded Python. First
+**enable the uWSGI stats server** — `--stats 127.0.0.1:1717` (TCP),
+`--stats /path.sock` (UNIX), or `--stats-http 127.0.0.1:1717` (HTTP); whichever
+address you pick becomes the check's `stats_url`.
 
-1. **Enable the uWSGI stats server** — `--stats 127.0.0.1:1717` (TCP),
-   `--stats /path.sock` (UNIX), or `--stats-http 127.0.0.1:1717` (HTTP).
+### Quick install (recommended)
 
-2. **Build the wheel** (see [Development](#development) for the dev environment):
+`scripts/build-and-install.sh` runs the whole build → install → configure flow
+(the [manual steps](#manual-install) below) as a single command:
+
+```bash
+./scripts/build-and-install.sh
+```
+
+Run it from an operator account that may `sudo -u dd-agent`. It needs **no
+general root access**: the wheel is built as you, then installed and configured
+as the Agent user. It stages the wheel through `/tmp` so `dd-agent` can read it
+(see step 2 for why), creates `conf.d/uwsgi_stats.d/conf.yaml` from the packaged
+example — an existing `conf.yaml` is **never overwritten**, so re-running the
+script to upgrade the check is safe — and prints the configure/verify/restart
+commands, including the single step that needs root (the Agent restart), at the
+end rather than performing them.
+
+For a non-standard host, override the defaults via environment variables:
+
+| Variable        | Default                     | Purpose                            |
+|-----------------|-----------------------------|------------------------------------|
+| `PYTHON`        | `python3`                   | Python used to build the wheel     |
+| `DD_AGENT_USER` | `dd-agent`                  | The Datadog Agent user             |
+| `DD_CONFD`      | `/etc/datadog-agent/conf.d` | Agent `conf.d` directory           |
+| `DATADOG_AGENT` | first on `PATH`             | Path to the `datadog-agent` binary |
+
+```bash
+# e.g. an Agent that runs as 'datadog' with a non-PATH binary
+DD_AGENT_USER=datadog DATADOG_AGENT=/opt/datadog-agent/bin/agent/agent \
+  ./scripts/build-and-install.sh
+```
+
+`./scripts/build-and-install.sh --help` prints a summary of all of the above.
+
+### Manual install
+
+The steps the script automates, if you would rather run them yourself or its
+assumptions don't fit your host:
+
+1. **Build the wheel** (see [Development](#development) for the dev environment):
 
    ```bash
    python -m build   # -> dist/datadog_uwsgi_stats-<version>-py3-none-any.whl
    ```
 
-3. **Install the wheel.** `datadog-agent integration install` runs as the
+2. **Install the wheel.** `datadog-agent integration install` runs as the
    `dd-agent` user, which usually cannot read files under your home directory —
    so stage the wheel somewhere world-readable (e.g. `/tmp`) and pass an
    **absolute** path, not a `dist/…` path that resolves back into `$HOME`:
@@ -38,7 +78,7 @@ Install the packaged integration into the Datadog Agent's embedded Python.
    `chown` anything — the config dir is owned by whoever ran the command
    (`dd-agent` above, which is what you want).
 
-4. **Configure.** Activate the copied template, set `stats_url`, and make sure
+3. **Configure.** Activate the copied template, set `stats_url`, and make sure
    the Agent user can read it:
 
    ```bash
@@ -48,7 +88,7 @@ Install the packaged integration into the Datadog Agent's embedded Python.
    sudo chmod 640 conf.yaml
    ```
 
-5. **Verify, then restart:**
+4. **Verify, then restart:**
 
    ```bash
    sudo -u dd-agent datadog-agent check uwsgi_stats   # runs the check once, as the Agent user

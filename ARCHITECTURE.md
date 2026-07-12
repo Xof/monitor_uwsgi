@@ -18,6 +18,7 @@ counter-vs-gauge choice correctly.
 | `metrics/sockets.py`, `workers.py`, `apps.py`, `caches.py`, `spoolers.py`, `cores.py` | One stats section each; every collector is `collect(check, stats, base_tags)` | same signature |
 | `datadog_checks/uwsgi_stats/health.py` | Derived saturation status for the `worker_saturation` service check | `evaluate_saturation(stats, instance)` |
 | `data/conf.yaml.example`, `metadata.csv`, `manifest.json`, `assets/` | Packaging: config template, metric catalog, tile manifest, service-check/config-spec assets | — |
+| `scripts/build-and-install.sh` | Operator install helper: build wheel → stage under `/tmp` → install as `dd-agent` → stage `conf.yaml` → print verify/restart (ADR 0003) | `./scripts/build-and-install.sh` |
 | `tests/` | pytest suite; `fixtures/stats.json` is the canonical stats snapshot | `tests/conftest.py` |
 
 ## Invariants
@@ -62,11 +63,13 @@ Agent scheduler (per instance, every min_collection_interval)
 - **Add a config option:** read it via `instance.get(...)` in `check.py` or the collector; document in `data/conf.yaml.example` and `assets/configuration/spec.yaml`.
 - **Change the stats transport / short-read handling:** `stats.py`.
 - **Change saturation thresholds or logic:** `health.py`.
+- **Change the build/install or bootstrap flow:** `scripts/build-and-install.sh`; keep its `conf.d` path and `datadog_uwsgi_stats-*.whl` name in sync with the packaging metadata and `README.md` (ADR 0003).
 - **Counter-vs-gauge / units reference:** design spec §7 (source-verified against uWSGI's C emitter).
 
 ---
 
 For **why** the architecture is this way (AgentCheck over DogStatsD; wheel over
-checks.d), see `docs/adr/0001-*.md`, `docs/adr/0002-*.md`, and the design spec
+checks.d; scripting the install), see `docs/adr/0001-*.md`,
+`docs/adr/0002-*.md`, `docs/adr/0003-*.md`, and the design spec
 `docs/superpowers/specs/2026-07-11-uwsgi-datadog-plugin-design.md`. For
 build/test/usage, see `README.md`.
