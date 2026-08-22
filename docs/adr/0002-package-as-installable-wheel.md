@@ -54,3 +54,12 @@ footprint.
   single file — accepted as the cost of a versioned, submittable integration.
 - Install path is `python -m build` → `datadog-agent integration install -w
   dist/*.whl` (or pip into the Agent env), not a file copy.
+
+## Addendum (2026-08-22)
+
+Choosing the wheel shape also made the *distribution name* load-bearing in a way
+not anticipated here: the Agent's upgrade restore routes a package to Datadog's
+TUF repository or to PyPI purely by whether its name starts with `datadog-`.
+ADR 0004 renames the distribution to `uwsgi-stats` for that reason. The decision
+recorded above — wheel over `checks.d` drop-in — is unchanged; only the name the
+wheel is published under.

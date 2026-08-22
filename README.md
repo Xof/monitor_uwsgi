@@ -58,7 +58,7 @@ assumptions don't fit your host:
 1. **Build the wheel** (see [Development](#development) for the dev environment):
 
    ```bash
-   python -m build   # -> dist/datadog_uwsgi_stats-<version>-py3-none-any.whl
+   python -m build   # -> dist/uwsgi_stats-<version>-py3-none-any.whl
    ```
 
 2. **Install the wheel.** `datadog-agent integration install` runs as the
@@ -67,9 +67,9 @@ assumptions don't fit your host:
    **absolute** path, not a `dist/…` path that resolves back into `$HOME`:
 
    ```bash
-   cp dist/datadog_uwsgi_stats-*.whl /tmp/
-   chmod 644 /tmp/datadog_uwsgi_stats-*.whl
-   sudo -u dd-agent datadog-agent integration install -w /tmp/datadog_uwsgi_stats-*.whl
+   cp dist/uwsgi_stats-*.whl /tmp/
+   chmod 644 /tmp/uwsgi_stats-*.whl
+   sudo -u dd-agent datadog-agent integration install -w /tmp/uwsgi_stats-*.whl
    ```
 
    This installs the check into the Agent's embedded Python and creates
@@ -97,6 +97,74 @@ assumptions don't fit your host:
 
 > `install -w` skips the version/compatibility checks the registry (`-t`) path
 > performs and cannot verify a local wheel — only install wheels you built or trust.
+
+### Upgrading from `datadog-uwsgi-stats` 1.0.0
+
+Version 1.1.0 renamed the PyPI distribution from `datadog-uwsgi-stats` to
+**`uwsgi-stats`** ([ADR 0004](docs/adr/0004-drop-datadog-prefix-from-distribution-name.md)).
+Nothing you configure changed — the check is still `uwsgi_stats`, the config is
+still `conf.d/uwsgi_stats.d/conf.yaml`, and every metric name is the same. Only
+the name the wheel is published under changed.
+
+**Remove the old distribution before installing the new one.** Both own the same
+`datadog_checks/uwsgi_stats/` files, so uninstalling `datadog-uwsgi-stats`
+*after* installing `uwsgi-stats` deletes the files you just installed:
+
+```bash
+sudo -u dd-agent datadog-agent integration remove datadog-uwsgi-stats  # if present
+```
+
+`scripts/build-and-install.sh` does this for you, in the right order. Removing
+the distribution does not touch `conf.d`, so your `conf.yaml` survives.
+
+Because the new name has no `datadog-` prefix, two Agent subcommands no longer
+apply to it — they reject any package name that isn't `datadog-*`, and
+`integration freeze` filters its output the same way. Use the Agent's embedded
+pip instead:
+
+| Instead of | Use |
+|---|---|
+| `datadog-agent integration show uwsgi-stats` | `sudo -u dd-agent /opt/datadog-agent/embedded/bin/pip show uwsgi-stats` |
+| `datadog-agent integration remove uwsgi-stats` | `sudo -u dd-agent /opt/datadog-agent/embedded/bin/pip uninstall uwsgi-stats` |
+| `datadog-agent integration freeze` (won't list it) | `sudo -u dd-agent /opt/datadog-agent/embedded/bin/pip list` |
+
+Installing with `integration install -w` is unaffected: it validates a local
+wheel by its `datadog-checks-base` dependency, not by its name.
+
+### Agent upgrades
+
+Upgrading the Datadog Agent replaces its embedded Python, which wipes every
+third-party integration. The Agent handles this itself: before the upgrade it
+records which distributions you added, and afterwards it reinstalls them. That
+restore routes each package by name — anything starting with `datadog-` is
+fetched from Datadog's signed integration repository, anything else from PyPI
+via the embedded pip.
+
+That is the whole reason this distribution is named `uwsgi-stats` and not
+`datadog-uwsgi-stats`. Under the old name the Agent looked for the check in
+Datadog's repository, which has never hosted it, and the restore failed — taking
+the entire `apt upgrade` down with it:
+
+```
+datadog_checks.downloader.exceptions.NoSuchDatadogPackage: datadog-uwsgi-stats
+ERROR: post failed to restore custom integrations
+```
+
+Under the new name the restore resolves against PyPI and succeeds unattended, so
+**no action is needed after an Agent upgrade** — provided the host can reach
+PyPI at upgrade time and the release is published there. If it cannot, re-run
+`scripts/build-and-install.sh` and restart the Agent.
+
+If you are still on 1.0.0 and hit the failure above, this unblocks `dpkg`:
+
+```bash
+sudo touch /etc/datadog-agent/.skip_install_python_third_party_deps
+sudo dpkg --configure -a
+```
+
+That flag makes the Agent skip the restore entirely, on this and every future
+upgrade. It stops the failure but not the wipe, so you must reinstall the check
+yourself afterwards — upgrading to 1.1.0 and removing the flag is the fix.
 
 ## Data Collected
 
