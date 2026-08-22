@@ -3,7 +3,18 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "datadog-uwsgi-stats"
+# NOTE: the distribution name deliberately has NO "datadog-" prefix, even though
+# this IS a datadog_checks integration. The Agent's upgrade restore
+# (omnibus/python-scripts/packages.py) routes a package by name alone:
+#   startswith("datadog-") and not in DEPS_STARTING_WITH_DATADOG
+#     -> `datadog-agent integration install -t` -> Datadog's TUF repo -> 404 for us
+#   otherwise
+#     -> embedded pip -> PyPI -> works
+# A "datadog-"-prefixed name therefore makes every Agent `apt upgrade` fail in
+# postinst. See ADR 0004. The Agent derives the check name by stripping that
+# prefix and mapping "-"->"_", so "uwsgi-stats" still yields check `uwsgi_stats`
+# and conf.d/uwsgi_stats.d, exactly as the old name did.
+name = "uwsgi-stats"
 dynamic = ["version"]
 description = "Datadog Agent check for the uWSGI stats server"
 readme = "README.md"

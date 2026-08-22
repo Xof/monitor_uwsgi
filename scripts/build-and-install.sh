@@ -20,6 +20,13 @@
 #     re-running this to upgrade the check must not wipe your configuration.
 #   * conf.d files are probed/created via `sudo -u dd-agent` because
 #     /etc/datadog-agent is typically readable only by the Agent user.
+#   * The distribution is named `uwsgi-stats`, with no `datadog-` prefix, so that
+#     the Agent's upgrade restore reinstalls it from PyPI via embedded pip rather
+#     than from Datadog's TUF repo, which has never heard of it (ADR 0004). The
+#     check name is still `uwsgi_stats`; only the PyPI distribution name changed.
+#   * The legacy `datadog-uwsgi-stats` distribution is removed BEFORE the new
+#     wheel is installed, never after. Both own the same files, so removing it
+#     afterwards would delete the install we just performed.
 #
 # Overridable via environment:
 #   PYTHON          python used to build the wheel   (default: python3)
@@ -33,9 +40,14 @@ PYTHON="${PYTHON:-python3}"
 DD_AGENT_USER="${DD_AGENT_USER:-dd-agent}"
 DD_CONFD="${DD_CONFD:-/etc/datadog-agent/conf.d}"
 CHECK="uwsgi_stats"
+DIST="uwsgi-stats"                 # PyPI distribution name (see header)
+LEGACY_DIST="datadog-uwsgi-stats"  # pre-1.1.0 name, retired by ADR 0004
 
 usage() {
-  sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'
+  # Print the header comment block: line 2 through the last consecutive comment
+  # line. Self-locating on purpose -- the previous hardcoded `sed -n '2,29p'`
+  # silently truncated --help every time the header gained a bullet.
+  awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
   exit "${1:-0}"
 }
 case "${1:-}" in -h | --help) usage 0 ;; esac
@@ -64,7 +76,7 @@ sudo -u "$DD_AGENT_USER" true \
 # --- Build -----------------------------------------------------------------
 step "Building the wheel"
 "$PYTHON" -m build --wheel
-WHEEL="$(ls -t dist/datadog_uwsgi_stats-*.whl 2>/dev/null | head -1 || true)"
+WHEEL="$(ls -t dist/uwsgi_stats-*.whl 2>/dev/null | head -1 || true)"
 [ -n "$WHEEL" ] || die "no wheel found in dist/ after build"
 echo "built: $WHEEL"
 
@@ -76,6 +88,23 @@ chmod 755 "$STAGING"                          # dd-agent must be able to travers
 cp "$WHEEL" "$STAGING/"
 STAGED_WHEEL="$STAGING/$(basename "$WHEEL")"
 chmod 644 "$STAGED_WHEEL"                      # ...and read the wheel
+
+# --- Retire the pre-1.1.0 distribution -------------------------------------
+# Both distributions install the SAME datadog_checks/uwsgi_stats/ files. If the
+# old one is left in place, a later `pip uninstall datadog-uwsgi-stats` deletes
+# the files this run installs -- so retire it here, ahead of the install, never
+# after it. `integration show` is the probe because it exits non-zero when the
+# package is absent; both subcommands accept the legacy name because it carries
+# the `datadog-` prefix the Agent's CLI validates against (the new name does
+# not, which is why removing $DIST later needs embedded pip instead).
+# Removal is pip-level only: it does not touch conf.d, so conf.yaml survives.
+step "Checking for the legacy '$LEGACY_DIST' distribution"
+if sudo -u "$DD_AGENT_USER" "$AGENT_BIN" integration show "$LEGACY_DIST" >/dev/null 2>&1; then
+  echo "found $LEGACY_DIST -- removing it before installing $DIST"
+  sudo -u "$DD_AGENT_USER" "$AGENT_BIN" integration remove "$LEGACY_DIST"
+else
+  echo "not installed; nothing to retire"
+fi
 
 # --- Install ---------------------------------------------------------------
 step "Installing into the Agent's embedded Python (as $DD_AGENT_USER)"

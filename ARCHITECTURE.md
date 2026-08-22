@@ -34,6 +34,8 @@ counter-vs-gauge choice correctly.
 - **`_prev_worker` (for `worker.mean_rt`) is keyed by `worker_id` only** and is updated every scrape before the delta guard. Safe under the Agent's one-check-object-per-instance model. Breaks: if one check object ever served multiple instances, `mean_rt` baselines cross-contaminate.
 - **Runtime code targets Python `>=3.8`** (the Agent's embedded interpreter), not the host's 3.13. Breaks: the integration becomes un-installable in the Agent.
 - **`datadog_checks/` is a PEP 420 namespace package — no top-level `datadog_checks/__init__.py`.** Breaks: shadows `datadog-checks-base`'s namespace.
+- **The PyPI distribution is named `uwsgi-stats` and must NOT start with `datadog-`.** The Agent's upgrade restore (`omnibus/python-scripts/packages.py`) routes by name: a `datadog-`-prefixed package not on Datadog's hardcoded `DEPS_STARTING_WITH_DATADOG` allowlist is fetched from Datadog's TUF repo, everything else from PyPI via embedded pip. Breaks: every `apt upgrade` of the Agent fails in `postinst` with `NoSuchDatadogPackage` and leaves the check uninstalled (ADR 0004). The importable path stays `datadog_checks/uwsgi_stats/` — only the distribution name is constrained.
+- **The distribution name determines the check name.** The Agent computes it as `strip_prefix("datadog-")` then `-`→`_` (`getIntegrationName`). `uwsgi-stats` → `uwsgi_stats` → `conf.d/uwsgi_stats.d/`. Breaks: renaming the distribution to anything else (e.g. `uwsgi-stats-check`) silently relocates the config directory and makes the Agent look for `data/` under a package path that does not exist.
 - **Every emitted metric is documented in `metadata.csv`** (enforced bidirectionally by `tests/test_metadata.py`, except `uwsgi.worker.mean_rt` which needs two scrapes). Breaks: catalog drift and `ddev validate` failure.
 
 ## Landmines
@@ -41,6 +43,8 @@ counter-vs-gauge choice correctly.
 - **Adding a metric touches three places:** the collector, `metadata.csv`, and `metrics/__init__.py` (if a new collector). The counter/gauge type comes from the uWSGI C source, not intuition — `avg_rt` is a rolling `(a+b)/2` smoother (not a mean; prefer `mean_rt`), `respawn_count` starts at 1, `running_time`/`avg_rt` are **microseconds**, `rss`/`vsz` are **0 without `--memory-report`**.
 - **`worker.mean_rt` is deliberately not emitted on the first scrape or immediately after a respawn** (it needs a prior sample and positive deltas). A test asserting it from a single scrape will fail by design.
 - **Tests set `DDEV_SKIP_GENERIC_TAGS_CHECK` suite-wide** (tests pass `env:`/`service:` user-style tags through instance config, which the dev harness's generic-tag guard would otherwise reject). `tests/test_metadata.py::test_no_collector_emits_generic_tag` re-establishes the real guarantee — that collectors emit no Datadog-generic tag key. Keep that test alive when adding tags.
+- **`datadog-agent integration remove|show|freeze` do not work on this package.** `remove` and `show` call `validateArgs(args, local=false)`, which rejects any name without a `datadog-` prefix; `freeze` filters its output to `datadog-`-prefixed lines. Use `/opt/datadog-agent/embedded/bin/pip` for all three. `integration install -w` is unaffected — it validates a local wheel by its `Requires-Dist: datadog-checks-base`, not by name. This is the accepted cost of ADR 0004.
+- **Retiring the legacy `datadog-uwsgi-stats` distribution must happen BEFORE installing `uwsgi-stats`, never after.** Both distributions own the same `datadog_checks/uwsgi_stats/` files, so a `pip uninstall datadog-uwsgi-stats` that runs after the new install deletes the new install's files. `scripts/build-and-install.sh` encodes this ordering; do not "tidy" the removal step to the end.
 - **The dev/test toolchain (`datadog-checks-dev`) requires Python ≥3.10; the runtime targets 3.8.** CI splits this: suite on 3.11/3.12, byte-compile of the runtime on 3.8. Do not add 3.9+ runtime syntax/APIs on the strength of a green local 3.13 run.
 
 ## Flow
@@ -63,12 +67,12 @@ Agent scheduler (per instance, every min_collection_interval)
 - **Add a config option:** read it via `instance.get(...)` in `check.py` or the collector; document in `data/conf.yaml.example` and `assets/configuration/spec.yaml`.
 - **Change the stats transport / short-read handling:** `stats.py`.
 - **Change saturation thresholds or logic:** `health.py`.
-- **Change the build/install or bootstrap flow:** `scripts/build-and-install.sh`; keep its `conf.d` path and `datadog_uwsgi_stats-*.whl` name in sync with the packaging metadata and `README.md` (ADR 0003).
+- **Change the build/install or bootstrap flow:** `scripts/build-and-install.sh`; keep its `conf.d` path and `uwsgi_stats-*.whl` name in sync with the packaging metadata and `README.md` (ADR 0003).
 - **Counter-vs-gauge / units reference:** verified against uWSGI's C stats emitter; each collector encodes the choice and `metadata.csv` records it.
 
 ---
 
 For **why** the architecture is this way (AgentCheck over DogStatsD; wheel over
-checks.d; scripting the install), see `docs/adr/0001-*.md`,
-`docs/adr/0002-*.md`, and `docs/adr/0003-*.md`. For build/test/usage, see
+checks.d; scripting the install; the un-prefixed distribution name), see
+`docs/adr/0001-*.md` through `docs/adr/0004-*.md`. For build/test/usage, see
 `README.md`.

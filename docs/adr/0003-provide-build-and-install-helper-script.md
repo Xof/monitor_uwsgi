@@ -89,3 +89,14 @@ recommended install path and retains the manual steps as a fallback.
   reporting** when it finishes; the operator's explicit final step is still
   required. This is intentional (root boundary) but means "ran the script" ≠
   "metrics flowing."
+
+## Addendum (2026-08-22)
+
+The wheel filename this record cites as `datadog_uwsgi_stats-*.whl` is now
+`uwsgi_stats-*.whl`: ADR 0004 renamed the distribution to `uwsgi-stats`. The
+script gained a step ahead of the install that removes the legacy
+`datadog-uwsgi-stats` distribution when present — both distributions own the
+same files, so the removal must precede the install, never follow it. The
+duplication this record flags (the `conf.d` path and wheel glob being repeated
+across the script, the packaging metadata, and `README.md`) is unchanged, and
+the rename is a worked example of it.
