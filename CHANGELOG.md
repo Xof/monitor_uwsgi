@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Documented that the re-raise in `check()` after a failed stats read is
+  load-bearing, not an implementation detail: the Agent collector marks an
+  instance `[ERROR]` only when `check()` raises, and deploy tooling reads that
+  marker because `datadog-agent check` exits 0 for an instance error. Replacing
+  it with the more common catch-CRITICAL-and-`return` idiom would report a
+  refused stats socket as `[OK]`. No behavior change; see ADR 0005 and issue #7.
+
 ## 1.1.0 / 2026-08-22
 
 - **Renamed the PyPI distribution from `datadog-uwsgi-stats` to `uwsgi-stats`.**

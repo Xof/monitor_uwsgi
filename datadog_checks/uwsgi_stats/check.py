@@ -36,6 +36,17 @@ class UwsgiStatsCheck(AgentCheck):
             self.service_check(
                 "can_connect", AgentCheck.CRITICAL, tags=base_tags, message=str(exc)
             )
+            # LOAD-BEARING; do not "tidy" this into a `return`. The Agent
+            # collector marks an instance [ERROR] only when check() RAISES, and
+            # that marker is the only machine-readable signal that a scrape
+            # failed -- `datadog-agent check` exits 0 whether the check
+            # succeeded or errored, so its exit status answers "did the check
+            # RUN", not "did it SUCCEED". An out-of-repo deploy consumer reads
+            # the marker to decide whether a host's uWSGI vassal is answering,
+            # so the common catch-CRITICAL-and-return idiom would report a
+            # refused stats socket as [OK] and converge a dead vassal green.
+            # See ADR 0005; test_can_connect_critical_and_reraise_on_failure
+            # is the guard.
             raise
 
         self.service_check("can_connect", AgentCheck.OK, tags=base_tags)
