@@ -33,30 +33,22 @@ machine-readable signal that a scrape failed:
   CRITICAL. Keying on "CRITICAL appears" cannot tell a dead vassal from a busy
   one.
 
-An out-of-repo consumer depends on this. The specifics that follow were read
-from the `datadog_agent` ansible role in the (private) peep deployment
-repository on 2026-08-27, while writing this record: they describe that role
-as it stood then, and nothing in this repository can verify them or notice if
-they change. The role runs `datadog-agent check uwsgi_stats` after installing
-the integration and computes its verdict as `rc == 0 and '[ERROR]' not in
-stdout`. On a host whose uWSGI vassal ini already exists — i.e. a converged
-host that is meant to be serving — a non-clean verdict fails the play rather
-than converging the host. (A host being built for the first time has no
-vassal ini yet and gets a report instead of a refusal, because the vassal is
-deployed one step later.)
+Deploy tooling outside this repository depends on this. It runs
+`datadog-agent check uwsgi_stats` on a host after installing the integration,
+reads the `[ERROR]` marker out of that output, and refuses to complete a
+deployment when a host that is supposed to be serving reports one. That is
+the whole of the coupling this record is about, and it is stated at the level
+of detail a reader of this repository can act on: the consumer's own
+configuration is deliberately not described here, because it is not ours to
+publish and because a description of it would go stale silently.
 
-The decision below does not rest on those specifics. It needs only the
-weaker claim, which is the one this repository can act on: some consumer
-outside this repository distinguishes a failed scrape from a healthy one by
-the `[ERROR]` marker, and therefore by whether `check()` raised.
-
-Two properties make this coupling sharp rather than theoretical. The role
-clones this repository at **branch head** by design — deliberately not
-SHA-pinned, so fixes to the check ship without editing the playbook — which
-means a change here reaches production hosts without any deliberate uptake
-step. And the failure is silent in both directions: no test in this
-repository asserts anything about downstream consumers, and no test in peep
-can observe this repository's source.
+Two properties make the coupling sharp rather than theoretical. The consumer
+tracks this repository at **branch head** rather than a pinned commit, by a
+deliberate choice on its side, so that fixes to the check reach hosts without
+an uptake step there — which means a change here reaches production without
+one either. And the failure is silent in both directions: no test in this
+repository asserts anything about downstream consumers, and no test on the
+other side can observe this repository's source.
 
 The realistic way this breaks is not malice or carelessness but good taste.
 The common Datadog-integration idiom is catch → submit CRITICAL → `return`,
@@ -112,11 +104,11 @@ which is the executable guard.
   compatibility obligations, to replace a signal the Agent already emits
   correctly. Revisit only if a second consumer appears with needs the
   `[ERROR]` marker cannot meet.
-- **Pin the consumer to a SHA so the coupling is a snapshot rather than
-  live.** Rejected, and not ours to decide: branch-head tracking is a
-  deliberate choice in the peep role so that fixes to this check ship without
-  a playbook edit. Pinning would trade this hazard for stale checks on
-  production hosts.
+- **Ask the consumer to pin a SHA, so the coupling is a snapshot rather than
+  live.** Rejected, and not ours to decide in any case: branch-head tracking
+  is a deliberate choice on the consumer's side, so that fixes to this check
+  ship without an edit there. Pinning would trade this hazard for stale
+  checks on production hosts.
 
 ## Consequences
 
@@ -132,12 +124,18 @@ which is the executable guard.
   starts propagating instance errors into the exit status, this record's
   reasoning needs re-examination even though this repository's code has not
   changed.
-- The reference to a private repository is deliberate. It is less useful to a
-  reader outside the project than a self-contained rationale would be, but
-  naming the actual consumer is what makes the constraint checkable rather
-  than folklore. The mechanism (`[ERROR]` marker, rc 0 for instance errors) is
-  stated in full here, so the record stands on its own without access to peep.
+- The consumer is described by what it does, not by name. This repository is
+  public and the consumer's is not, so its identity and configuration are not
+  ours to publish here. The cost is real and worth stating: a reader cannot
+  go and check the claim, which makes this the one part of the record that
+  has to be taken on trust. What keeps it from being folklore is that the
+  mechanism it depends on — the `[ERROR]` marker, and rc 0 for an instance
+  error — is Agent behaviour, stated in full above, and verifiable by anyone
+  against any integration.
+- Because the consumer is unnamed here, this record cannot be the thing that
+  tells a future maintainer *who* to coordinate with before changing
+  `check()`'s error path. That has to come from elsewhere.
 - Not addressed: nothing verifies the coupling end to end. The guarantee is
-  four pieces of prose and one unit test on this side, and a role comment on
-  the other. An integration test spanning both repositories would be the real
-  fix and does not exist.
+  four pieces of prose and one unit test on this side, and a comment on the
+  other. An integration test spanning both repositories would be the real fix
+  and does not exist.
