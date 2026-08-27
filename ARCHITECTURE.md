@@ -30,6 +30,7 @@ counter-vs-gauge choice correctly.
 - **`read_stats` reads to EOF, then parses.** The stats server writes one JSON object and closes with no framing. Breaks: a single `recv()` truncates any non-trivial payload → `JSONDecodeError`.
 - **Optional stats sections are accessed via `.get()`.** `cores`/`caches`/`spoolers`/`listen_queue*` are feature- or OS-gated. Breaks: `KeyError` against a uWSGI built/configured without them.
 - **`ConfigurationError` propagates un-wrapped from `check()`; a connect/read/parse failure submits `uwsgi.can_connect` CRITICAL then re-raises.** Breaks: a misconfiguration reported as a spurious connectivity alert (the `except ConfigurationError: raise` clause must stay ordered before the broad `except`).
+- **That re-raise is an external contract, not an implementation detail.** The Agent collector marks an instance `[ERROR]` only when `check()` raises, and an out-of-repo deploy consumer (peep's ansible `datadog_agent` role) reads that marker to decide whether a host's uWSGI vassal is answering — it cannot read the exit status, because `datadog-agent check` exits 0 for an instance error. The role tracks this repo's branch head, so the coupling is live. Breaks: swapping the `raise` for the more idiomatic catch-CRITICAL-and-`return` reports a refused stats socket as `[OK]`, and a dead vassal converges green fleet-wide, with nothing in either repo's tests able to see it (ADR 0005).
 - **Service checks carry `message=None` when status is OK.** Breaks: the `datadog-checks-base` aggregator rejects a message on an OK service check.
 - **`_prev_worker` (for `worker.mean_rt`) is keyed by `worker_id` only** and is updated every scrape before the delta guard. Safe under the Agent's one-check-object-per-instance model. Breaks: if one check object ever served multiple instances, `mean_rt` baselines cross-contaminate.
 - **Runtime code targets Python `>=3.8`** (the Agent's embedded interpreter), not the host's 3.13. Breaks: the integration becomes un-installable in the Agent.
@@ -73,6 +74,6 @@ Agent scheduler (per instance, every min_collection_interval)
 ---
 
 For **why** the architecture is this way (AgentCheck over DogStatsD; wheel over
-checks.d; scripting the install; the un-prefixed distribution name), see
-`docs/adr/0001-*.md` through `docs/adr/0004-*.md`. For build/test/usage, see
-`README.md`.
+checks.d; scripting the install; the un-prefixed distribution name; the re-raise
+as a public contract), see `docs/adr/0001-*.md` through `docs/adr/0005-*.md`.
+For build/test/usage, see `README.md`.
