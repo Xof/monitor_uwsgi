@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.1 / 2026-08-27
 
 - `scripts/build-and-install.sh` now repairs an installation whose pip metadata
   outlived its files. Pip reports such a distribution as already installed and
