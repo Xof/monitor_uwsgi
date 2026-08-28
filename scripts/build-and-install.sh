@@ -27,18 +27,24 @@
 #   * The legacy `datadog-uwsgi-stats` distribution is removed BEFORE the new
 #     wheel is installed, never after. Both own the same files, so removing it
 #     afterwards would delete the install we just performed.
+#   * Stale `uwsgi-stats` metadata is cleared before installing, and the probe for
+#     it runs AFTER the legacy retire above -- because that retire is one of the
+#     things that can create it. See the step's own comment (ADR 0006).
 #
 # Overridable via environment:
 #   PYTHON          python used to build the wheel   (default: python3)
 #   DD_AGENT_USER   the Datadog Agent user           (default: dd-agent)
 #   DD_CONFD        Agent conf.d directory           (default: /etc/datadog-agent/conf.d)
 #   DATADOG_AGENT   path to the datadog-agent binary (default: found on PATH)
+#   DD_EMBEDDED_PYTHON  the Agent's embedded interpreter
+#                   (default: /opt/datadog-agent/embedded/bin/python)
 #
 set -euo pipefail
 
 PYTHON="${PYTHON:-python3}"
 DD_AGENT_USER="${DD_AGENT_USER:-dd-agent}"
 DD_CONFD="${DD_CONFD:-/etc/datadog-agent/conf.d}"
+DD_EMBEDDED_PYTHON="${DD_EMBEDDED_PYTHON:-/opt/datadog-agent/embedded/bin/python}"
 CHECK="uwsgi_stats"
 DIST="uwsgi-stats"                 # PyPI distribution name (see header)
 LEGACY_DIST="datadog-uwsgi-stats"  # pre-1.1.0 name, retired by ADR 0004
@@ -105,6 +111,83 @@ if sudo -u "$DD_AGENT_USER" "$AGENT_BIN" integration show "$LEGACY_DIST" >/dev/n
 else
   echo "not installed; nothing to retire"
 fi
+
+# --- Clear stale $DIST metadata --------------------------------------------
+# `datadog-agent integration install` delegates to the embedded pip, and pip
+# decides "already installed" from the .dist-info METADATA alone -- it never
+# checks that the files are still there. So a distribution whose metadata
+# outlived its files is a permanent wedge: pip skips the install and reports
+# success, the Agent's post-install step then tries to copy
+# datadog_checks/<check>/data/conf.yaml.example out of a package directory that
+# does not exist, and the run dies with
+#
+#     Error: Some errors prevented moving uwsgi-stats configuration files:
+#     open .../site-packages/datadog_checks/uwsgi_stats/data: no such file or directory
+#
+# Every later run fails identically. Neither obvious repair is available: the
+# Agent CLI has no --force-reinstall (that advice in pip's output is pip's, not
+# the Agent's), and `integration remove` refuses $DIST outright because ADR 0004
+# dropped the `datadog-` prefix its validator requires -- which is exactly the
+# case the legacy-retire comment above already anticipates. Embedded pip is the
+# only tool that can clear it.
+#
+# AFTER THE LEGACY RETIRE, NOT BEFORE, and that ordering is load-bearing: both
+# distributions own the same datadog_checks/uwsgi_stats/ files, so removing
+# $LEGACY_DIST deletes them while leaving $DIST's .dist-info behind -- the retire
+# step is itself one of the ways this state is created, within a single run.
+# Probing ahead of it would look, correctly, at a host that was still healthy.
+#
+# FOUR STATES, NOT TWO. `unknown` -- the embedded interpreter is not where we
+# expect, or cannot run -- must be a no-op, not a failure and not a removal: the
+# rest of this script works fine on a host whose layout differs, and an
+# unreadable probe is not evidence of anything. Only a positive identification
+# of `orphan` removes anything. A false `orphan` costs one reinstall (we install
+# immediately below); a false `installed` costs the wedge above, so the probe is
+# deliberately biased toward `orphan` -- it also reports one when the package
+# directory is present but has lost the `data/` subdirectory the Agent's
+# post-install step opens.
+#
+# INLINE `-c`, NOT A FILE IN THIS REPO. The probe runs as $DD_AGENT_USER, which
+# per the staging note in the header normally cannot read anything under your
+# $HOME -- a scripts/*.py helper would hit the same "[Errno 13] Permission
+# denied" the wheel staging exists to avoid. Arguments are passed as argv rather
+# than interpolated into the source.
+step "Checking for stale '$DIST' metadata"
+DIST_STATE="$(sudo -u "$DD_AGENT_USER" "$DD_EMBEDDED_PYTHON" -c '
+import importlib.util, os, sys
+from importlib.metadata import PackageNotFoundError, version
+
+# Both spellings: the distribution is "uwsgi-stats" but setuptools writes the
+# directory as "uwsgi_stats-<v>.dist-info", and how much name normalization
+# importlib.metadata does varies across the Python versions the Agent has
+# embedded over time. Asking for both removes the dependency on that.
+for candidate in (sys.argv[1], sys.argv[1].replace("-", "_")):
+    try:
+        version(candidate)
+    except PackageNotFoundError:
+        continue
+    break
+else:
+    print("absent")
+    raise SystemExit
+try:
+    spec = importlib.util.find_spec(sys.argv[2])
+except Exception:
+    spec = None
+paths = list(getattr(spec, "submodule_search_locations", None) or [])
+print("installed" if any(os.path.isdir(os.path.join(p, "data")) for p in paths) else "orphan")
+' "$DIST" "datadog_checks.$CHECK" 2>/dev/null)" || DIST_STATE="unknown"
+
+case "$DIST_STATE" in
+  orphan)
+    echo "$DIST is recorded as installed but its files are gone -- clearing the metadata"
+    sudo -u "$DD_AGENT_USER" "$DD_EMBEDDED_PYTHON" -m pip uninstall -y "$DIST" \
+      || die "could not clear the stale $DIST metadata with $DD_EMBEDDED_PYTHON -- the install below would be skipped by pip and then fail on the missing package directory"
+    ;;
+  installed) echo "$DIST is installed and intact" ;;
+  absent)    echo "$DIST is not installed; nothing to clear" ;;
+  *)         echo "could not read $DD_EMBEDDED_PYTHON -- skipping the staleness check" ;;
+esac
 
 # --- Install ---------------------------------------------------------------
 step "Installing into the Agent's embedded Python (as $DD_AGENT_USER)"

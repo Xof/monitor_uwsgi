@@ -18,8 +18,8 @@ counter-vs-gauge choice correctly.
 | `metrics/sockets.py`, `workers.py`, `apps.py`, `caches.py`, `spoolers.py`, `cores.py` | One stats section each; every collector is `collect(check, stats, base_tags)` | same signature |
 | `datadog_checks/uwsgi_stats/health.py` | Derived saturation status for the `worker_saturation` service check | `evaluate_saturation(stats, instance)` |
 | `data/conf.yaml.example`, `metadata.csv`, `manifest.json`, `assets/` | Packaging: config template, metric catalog, tile manifest, service-check/config-spec assets | — |
-| `scripts/build-and-install.sh` | Operator install helper: build wheel → stage under `/tmp` → install as `dd-agent` → stage `conf.yaml` → print verify/restart (ADR 0003) | `./scripts/build-and-install.sh` |
-| `tests/` | pytest suite; `fixtures/stats.json` is the canonical stats snapshot | `tests/conftest.py` |
+| `scripts/build-and-install.sh` | Operator install helper: build wheel → stage under `/tmp` → retire legacy dist → clear stale metadata → install as `dd-agent` → stage `conf.yaml` → print verify/restart (ADR 0003, 0006) | `./scripts/build-and-install.sh` |
+| `tests/` | pytest suite; `fixtures/stats.json` is the canonical stats snapshot; `test_build_and_install.py` runs the install script against stubs | `tests/conftest.py` |
 
 ## Invariants
 
@@ -46,6 +46,7 @@ counter-vs-gauge choice correctly.
 - **Tests set `DDEV_SKIP_GENERIC_TAGS_CHECK` suite-wide** (tests pass `env:`/`service:` user-style tags through instance config, which the dev harness's generic-tag guard would otherwise reject). `tests/test_metadata.py::test_no_collector_emits_generic_tag` re-establishes the real guarantee — that collectors emit no Datadog-generic tag key. Keep that test alive when adding tags.
 - **`datadog-agent integration remove|show|freeze` do not work on this package.** `remove` and `show` call `validateArgs(args, local=false)`, which rejects any name without a `datadog-` prefix; `freeze` filters its output to `datadog-`-prefixed lines. Use `/opt/datadog-agent/embedded/bin/pip` for all three. `integration install -w` is unaffected — it validates a local wheel by its `Requires-Dist: datadog-checks-base`, not by name. This is the accepted cost of ADR 0004.
 - **Retiring the legacy `datadog-uwsgi-stats` distribution must happen BEFORE installing `uwsgi-stats`, never after.** Both distributions own the same `datadog_checks/uwsgi_stats/` files, so a `pip uninstall datadog-uwsgi-stats` that runs after the new install deletes the new install's files. `scripts/build-and-install.sh` encodes this ordering; do not "tidy" the removal step to the end.
+- **Pip decides "already installed" from `.dist-info` metadata alone, so metadata that outlives its files is a permanent wedge.** `integration install` skips, reports success, and the Agent's post-install step then ENOENTs on `datadog_checks/uwsgi_stats/data`. There is no way out from the Agent side: it exposes no `--force-reinstall` (that advice in the output is pip's), and `integration remove` refuses this package per the bullet above. `scripts/build-and-install.sh` probes for it and clears it with embedded pip, **after** the legacy retire — which is itself one of the ways the state is created, since removing either distribution deletes the files both own. Only a positive `orphan` verdict removes anything; an unreadable probe is a no-op. See ADR 0006 and issue #10.
 - **The dev/test toolchain (`datadog-checks-dev`) requires Python ≥3.10; the runtime targets 3.8.** CI splits this: suite on 3.11/3.12, byte-compile of the runtime on 3.8. Do not add 3.9+ runtime syntax/APIs on the strength of a green local 3.13 run.
 
 ## Flow

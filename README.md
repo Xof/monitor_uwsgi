@@ -166,6 +166,38 @@ That flag makes the Agent skip the restore entirely, on this and every future
 upgrade. It stops the failure but not the wipe, so you must reinstall the check
 yourself afterwards — upgrading to 1.1.0 and removing the flag is the fix.
 
+### "no such file or directory" on install
+
+If an install ends like this, pip believes the check is installed and its files
+are not there:
+
+```
+uwsgi-stats is already installed with the same version as the provided wheel.
+Use --force-reinstall to force an installation of the wheel.
+Error: Some errors prevented moving uwsgi-stats configuration files:
+open .../site-packages/datadog_checks/uwsgi_stats/data: no such file or directory
+```
+
+Pip decides "already installed" from the `.dist-info` metadata alone and never
+checks that the files still exist, so it skips the install; the Agent's
+post-install step then opens a package directory that was never written. Left
+alone this repeats forever — the Agent has no `--force-reinstall` (that line is
+pip's advice about a flag the Agent does not expose) and `integration remove`
+rejects this package's name.
+
+`scripts/build-and-install.sh` detects and clears this before installing, so
+re-running it is the fix. With an older copy of the script, clear the metadata
+by hand first:
+
+```bash
+sudo -u dd-agent /opt/datadog-agent/embedded/bin/pip uninstall -y uwsgi-stats
+./scripts/build-and-install.sh
+```
+
+`sudo -u dd-agent datadog-agent check uwsgi_stats` reports `No module named
+'datadog_checks.uwsgi_stats'` while the check is missing, and an `[OK]` instance
+once it is back.
+
 ## Data Collected
 
 ### Metrics
