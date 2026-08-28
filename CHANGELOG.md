@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- `scripts/build-and-install.sh` now repairs an installation whose pip metadata
+  outlived its files. Pip reports such a distribution as already installed and
+  skips, after which the Agent's post-install step fails on the missing package
+  directory — a state no re-run could clear, because the Agent exposes no
+  `--force-reinstall` and `integration remove` refuses this package's name. The
+  script probes for it with the Agent's embedded interpreter and clears the
+  stale metadata before installing. The probe runs after the
+  legacy-distribution retire, which is one of the ways the state arises, and
+  only a positive identification removes anything: an unreadable interpreter is
+  a no-op. Adds `DD_EMBEDDED_PYTHON` (default
+  `/opt/datadog-agent/embedded/bin/python`) and
+  `tests/test_build_and_install.py`, the script's first coverage. See ADR 0006
+  and issue #10.
 - Documented that the re-raise in `check()` after a failed stats read is
   load-bearing, not an implementation detail: the Agent collector marks an
   instance `[ERROR]` only when `check()` raises, and deploy tooling reads that
